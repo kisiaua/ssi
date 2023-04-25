@@ -1,5 +1,6 @@
 import pandas as pd
 import random
+import math
 
 
 csv = pd.read_csv('dataset/HeartDisease.csv')
@@ -64,3 +65,68 @@ class KNN:
                 correct += 1
 
         return f'KNN wynik: {correct} na {len(testing)}, {(correct / len(testing) * 100):.2f}% (m={m}, k={k})'
+
+
+class Bayes:
+    def __init__(self, training, testing):
+        self.training = training
+        self.testing = testing
+        self.separateByClass()
+        self.calcStatistics()
+        self.training[target_column] = training[target_column].astype(str)
+        self.testing[target_column] = testing[target_column].astype(str)
+
+    def separateByClass(self):
+        self.firstSet = self.training.groupby(target_column).get_group(1).reset_index(drop=True)
+        self.secondSet = self.training.groupby(target_column).get_group(0).reset_index(drop=True)
+
+    def calcStatistics(self):
+
+        valuesFirstSet = []
+        valuesSecondSet = []
+
+        for column in self.training.columns[:-1]:
+            valuesFirstSet.append([self.firstSet[column].mean(), self.firstSet[column].std(), len(self.firstSet[column])])
+            valuesSecondSet.append([self.secondSet[column].mean(), self.secondSet[column].std(), len(self.secondSet[column])])
+
+        self.stats = {
+            "1": valuesFirstSet,
+            "0": valuesSecondSet,
+        }
+
+    def gaussianProb(self, x, mean, std):
+        fraction = (1 / (std * math.sqrt(2 * math.pi)))
+        exp = math.exp(-1/2 * ((x - mean) / std) ** 2)
+        return fraction * exp
+
+    def triangularDistribution(self, x, mean, std):
+        if x < (mean - math.sqrt(6) * std) or x > (mean + math.sqrt(6) * std):
+            return 0
+        elif x >= (mean - math.sqrt(6) * std) or x <= mean:
+            return ((x - mean) / (6 * std ** 2)) + (1 / (math.sqrt(6) * std))
+        elif x <= (mean - math.sqrt(6) * std) or x >= mean:
+            return (-1 *(x - mean) / (6 * std ** 2)) + (1 / (math.sqrt(6) * std))
+    
+    def calcProbabilities(self, row):
+        probabilitiesByClass = {}
+        for className, classValues in self.stats.items():
+            probabilitiesByClass[className] = self.stats[className][0][2]/float(len(self.training))
+        
+            for idx in range(len(classValues)):
+                mean, std, _ = classValues[idx]
+                probabilitiesByClass[className] *= self.gaussianProb(row[idx], mean, std)
+
+        return probabilitiesByClass
+
+    def bayes(self):
+        correct = 0
+
+        for _, row_tst in self.testing.iterrows():
+            row_testing = row_tst.tolist()
+
+            className = self.calcProbabilities(row_testing[:-1])
+
+            if max(className, key=className.get) == row_testing[-1]:
+                correct += 1
+
+        return f'Bayes wynik: {correct} na {len(self.testing)}, {(correct / len(self.testing) * 100):.2f}%'
