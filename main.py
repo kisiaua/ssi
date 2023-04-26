@@ -1,6 +1,7 @@
 import pandas as pd
 import random
 import math
+from sklearn import svm, metrics
 
 
 csv = pd.read_csv('dataset/HeartDisease.csv')
@@ -130,3 +131,18 @@ class Bayes:
                 correct += 1
 
         return f'Bayes wynik: {correct} na {len(self.testing)}, {(correct / len(self.testing) * 100):.2f}%'
+    
+
+class SVM:
+    @staticmethod
+    def svm(training, testing):
+        X_train = training.drop(target_column, axis=1)
+        X_test = testing.drop(target_column, axis=1)
+        y_train = training[target_column].values.ravel()
+        y_test = testing[target_column].values.ravel()
+
+        clf = svm.SVC(kernel='linear')
+        clf.fit(X_train, y_train)        
+        y_pred = clf.predict(X_test)
+
+        return f'SVM wynik: {metrics.accuracy_score(y_test, y_pred) * 100:.2f}%'
