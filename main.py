@@ -2,6 +2,10 @@ import pandas as pd
 import random
 import math
 from sklearn import svm, metrics
+from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import ComplementNB
+from sklearn.naive_bayes import BernoulliNB
 
 
 csv = pd.read_csv('dataset/HeartDisease.csv')
@@ -65,7 +69,7 @@ class KNN:
             if max(classes, key=classes.get) == row_testing[target_column_num]:
                 correct += 1
 
-        return f'KNN wynik: {correct} na {len(testing)}, {(correct / len(testing) * 100):.2f}% (m={m}, k={k})'
+        return correct / len(testing)
 
 
 class Bayes:
@@ -130,19 +134,46 @@ class Bayes:
             if max(className, key=className.get) == row_testing[-1]:
                 correct += 1
 
-        return f'Bayes wynik: {correct} na {len(self.testing)}, {(correct / len(self.testing) * 100):.2f}%'
-    
+        return correct / len(self.testing)
 
+class BayesSK:
+    @staticmethod
+    def bayes(training, testing):
+        X_train = training.drop(target_column, axis=1)
+        X_test = testing.drop(target_column, axis=1)
+        y_train = training[target_column].values.ravel()
+        y_test = testing[target_column].values.ravel()
+    
+        gaussian = GaussianNB()
+        multinomial = MultinomialNB()
+        complement = ComplementNB()
+        bernoulli = BernoulliNB()
+
+        gaussian.fit(X_train, y_train)
+        multinomial.fit(X_train, y_train)
+        complement.fit(X_train, y_train)
+        bernoulli.fit(X_train, y_train)
+
+        gaussianPred = gaussian.predict(X_test)
+        multinomialPred = multinomial.predict(X_test)
+        complementPred = complement.predict(X_test)
+        bernoulliPred = bernoulli.predict(X_test)
+
+        return (metrics.accuracy_score(y_test, gaussianPred), 
+                metrics.accuracy_score(y_test, multinomialPred), 
+                metrics.accuracy_score(y_test, complementPred), 
+                metrics.accuracy_score(y_test, bernoulliPred))
+    
 class SVM:
     @staticmethod
-    def svm(training, testing):
+    def svm(training, testing, kernel):
         X_train = training.drop(target_column, axis=1)
         X_test = testing.drop(target_column, axis=1)
         y_train = training[target_column].values.ravel()
         y_test = testing[target_column].values.ravel()
 
-        clf = svm.SVC(kernel='linear')
+        clf = svm.SVC(kernel=kernel)
         clf.fit(X_train, y_train)        
         y_pred = clf.predict(X_test)
 
-        return f'SVM wynik: {metrics.accuracy_score(y_test, y_pred) * 100:.2f}%'
+        return metrics.accuracy_score(y_test, y_pred)
